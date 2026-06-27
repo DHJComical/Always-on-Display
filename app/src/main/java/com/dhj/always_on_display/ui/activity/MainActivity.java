@@ -66,6 +66,14 @@ public class MainActivity extends AppCompatActivity {
         bottomNavigationView.setSelectedItemId(R.id.nav_intro);
     }
 
+    public void openAppsPage() {
+        bottomNavigationView.setSelectedItemId(R.id.nav_apps);
+    }
+
+    public void openSettingsPage() {
+        bottomNavigationView.setSelectedItemId(R.id.nav_settings);
+    }
+
     private static final class BottomPagerAdapter extends FragmentStateAdapter {
         private final List<Fragment> fragments;
 

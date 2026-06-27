@@ -27,6 +27,8 @@
     <style name="Widget.AlwaysOn.Card" parent="Widget.Material3.CardView.Elevated">
         <item name="cardCornerRadius">@dimen/corner_radius_medium</item>
         <item name="cardElevation">0dp</item>
+        <item name="cardBackgroundColor">?attr/colorSurfaceContainerHigh</item>
+        <item name="strokeWidth">0dp</item>
     </style>
 
     <style name="Widget.AlwaysOn.StatusCard" parent="Widget.Material3.CardView.Elevated">

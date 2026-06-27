@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -19,7 +21,6 @@ import com.dhj.always_on_display.R;
 import com.dhj.always_on_display.data.AppSelectorStore;
 import com.dhj.always_on_display.model.AppInfo;
 import com.dhj.always_on_display.ui.adapter.AppListAdapter;
-import com.google.android.material.textfield.TextInputEditText;
 
 import java.text.Collator;
 import java.util.ArrayList;
@@ -33,8 +34,12 @@ public class AppsFragment extends Fragment {
 
     private AppListAdapter adapter;
     private TextView selectionCount;
-    private TextView emptyState;
-    private TextInputEditText searchInput;
+    private View emptyState;
+    private TextView emptyTitle;
+    private TextView emptySubtitle;
+    private EditText searchInput;
+    private ImageButton clearSearchButton;
+    private boolean isLoadingApps;
 
     public AppsFragment() {
         super(R.layout.fragment_apps);
@@ -59,7 +64,10 @@ public class AppsFragment extends Fragment {
     private void bindViews(@NonNull View view) {
         selectionCount = view.findViewById(R.id.selectionCount);
         emptyState = view.findViewById(R.id.emptyState);
+        emptyTitle = view.findViewById(R.id.emptyTitle);
+        emptySubtitle = view.findViewById(R.id.emptySubtitle);
         searchInput = view.findViewById(R.id.searchInput);
+        clearSearchButton = view.findViewById(R.id.clearSearchButton);
     }
 
     private void setupRecyclerView(@NonNull View view) {
@@ -83,18 +91,21 @@ public class AppsFragment extends Fragment {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterApps(s == null ? "" : s.toString());
+                String query = s == null ? "" : s.toString();
+                clearSearchButton.setVisibility(query.isEmpty() ? View.GONE : View.VISIBLE);
+                filterApps(query);
             }
 
             @Override
             public void afterTextChanged(Editable s) {
             }
         });
+        clearSearchButton.setOnClickListener(v -> searchInput.setText(""));
     }
 
     private void loadInstalledApps() {
-        emptyState.setText(R.string.loading_apps);
-        emptyState.setVisibility(View.VISIBLE);
+        isLoadingApps = true;
+        showLoadingState();
         PackageManager packageManager = requireContext().getPackageManager();
         String selfPackageName = requireContext().getPackageName();
 
@@ -127,6 +138,7 @@ public class AppsFragment extends Fragment {
                 if (!isAdded()) {
                     return;
                 }
+                isLoadingApps = false;
                 allApps.clear();
                 allApps.addAll(loadedApps);
                 filterApps(getSearchQuery());
@@ -155,6 +167,11 @@ public class AppsFragment extends Fragment {
             return;
         }
 
+        if (isLoadingApps) {
+            showLoadingState();
+            return;
+        }
+
         String normalizedQuery = query.trim().toLowerCase(Locale.ROOT);
         List<AppInfo> filteredApps = new ArrayList<>();
 
@@ -167,14 +184,23 @@ public class AppsFragment extends Fragment {
         }
 
         adapter.submitList(filteredApps);
-        emptyState.setVisibility(filteredApps.isEmpty() ? View.VISIBLE : View.GONE);
         if (filteredApps.isEmpty()) {
-            emptyState.setText(allApps.isEmpty() ? R.string.loading_apps : R.string.empty_apps);
+            emptyState.setVisibility(View.VISIBLE);
+            emptyTitle.setText(R.string.apps_empty_title);
+            emptySubtitle.setText(R.string.apps_empty_subtitle);
+        } else {
+            emptyState.setVisibility(View.GONE);
         }
     }
 
     private String getSearchQuery() {
         Editable editable = searchInput.getText();
         return editable == null ? "" : editable.toString();
+    }
+
+    private void showLoadingState() {
+        emptyState.setVisibility(View.VISIBLE);
+        emptyTitle.setText(R.string.loading_apps);
+        emptySubtitle.setText("");
     }
 }
