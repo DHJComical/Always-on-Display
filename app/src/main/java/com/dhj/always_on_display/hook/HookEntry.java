@@ -1,4 +1,4 @@
-package com.dhj.always_on_display;
+package com.dhj.always_on_display.hook;
 
 import android.app.Activity;
 import android.os.Bundle;

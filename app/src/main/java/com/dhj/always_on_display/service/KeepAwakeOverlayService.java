@@ -1,8 +1,7 @@
-package com.dhj.always_on_display;
+package com.dhj.always_on_display.service;
 
 import android.app.Service;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Build;
@@ -14,41 +13,38 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 
+import com.dhj.always_on_display.data.AppSelectorStore;
+import com.dhj.always_on_display.monitor.ForegroundAppMonitor;
+
 import java.util.Set;
 
 public class KeepAwakeOverlayService extends Service {
     public static final String ACTION_START = "com.dhj.always_on_display.action.START_KEEP_AWAKE_OVERLAY";
     public static final String ACTION_STOP = "com.dhj.always_on_display.action.STOP_KEEP_AWAKE_OVERLAY";
+
     private static final long CHECK_INTERVAL_MS = 1200L;
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable foregroundCheck = this::refreshOverlayState;
 
     private WindowManager windowManager;
     private View overlayView;
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    private final Runnable foregroundCheck = new Runnable() {
-        @Override
-        public void run() {
-            refreshOverlayState();
-        }
-    };
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? ACTION_START : intent.getAction();
         if (ACTION_STOP.equals(action)) {
-            handler.removeCallbacks(foregroundCheck);
-            removeOverlay();
-            setOverlayActive(false);
-            stopSelf();
+            stopOverlayWork();
             return START_NOT_STICKY;
         }
 
         if (!Settings.canDrawOverlays(this) || !ForegroundAppMonitor.hasUsageAccess(this)) {
-            setOverlayActive(false);
+            AppSelectorStore.setOverlayActive(this, false);
             stopSelf();
             return START_NOT_STICKY;
         }
 
-        setOverlayActive(true);
+        AppSelectorStore.setOverlayActive(this, true);
         handler.removeCallbacks(foregroundCheck);
         handler.post(foregroundCheck);
         return START_STICKY;
@@ -56,9 +52,7 @@ public class KeepAwakeOverlayService extends Service {
 
     @Override
     public void onDestroy() {
-        handler.removeCallbacks(foregroundCheck);
-        removeOverlay();
-        setOverlayActive(false);
+        stopOverlayWork();
         super.onDestroy();
     }
 
@@ -70,7 +64,7 @@ public class KeepAwakeOverlayService extends Service {
     private void refreshOverlayState() {
         if (!Settings.canDrawOverlays(this) || !ForegroundAppMonitor.hasUsageAccess(this)) {
             removeOverlay();
-            setOverlayActive(false);
+            AppSelectorStore.setOverlayActive(this, false);
             stopSelf();
             return;
         }
@@ -131,16 +125,18 @@ public class KeepAwakeOverlayService extends Service {
         overlayView = null;
     }
 
+    private void stopOverlayWork() {
+        handler.removeCallbacks(foregroundCheck);
+        removeOverlay();
+        AppSelectorStore.setOverlayActive(this, false);
+        stopSelf();
+    }
+
     @SuppressWarnings("deprecation")
     private int getOverlayWindowType() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             return WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
         }
         return WindowManager.LayoutParams.TYPE_PHONE;
-    }
-
-    private void setOverlayActive(boolean active) {
-        SharedPreferences preferences = getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE);
-        preferences.edit().putBoolean(MainActivity.KEY_OVERLAY_ACTIVE, active).apply();
     }
 }

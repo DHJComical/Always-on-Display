@@ -1,4 +1,4 @@
-package com.dhj.always_on_display;
+package com.dhj.always_on_display.monitor;
 
 import android.app.AppOpsManager;
 import android.app.usage.UsageEvents;
@@ -7,12 +7,12 @@ import android.content.Context;
 import android.os.Build;
 import android.os.Process;
 
-final class ForegroundAppMonitor {
+public final class ForegroundAppMonitor {
     private ForegroundAppMonitor() {
     }
 
     @SuppressWarnings("deprecation")
-    static boolean hasUsageAccess(Context context) {
+    public static boolean hasUsageAccess(Context context) {
         AppOpsManager appOpsManager = context.getSystemService(AppOpsManager.class);
         if (appOpsManager == null) {
             return false;
@@ -35,7 +35,7 @@ final class ForegroundAppMonitor {
         return mode == AppOpsManager.MODE_ALLOWED;
     }
 
-    static String getForegroundPackageName(Context context) {
+    public static String getForegroundPackageName(Context context) {
         UsageStatsManager usageStatsManager = context.getSystemService(UsageStatsManager.class);
         if (usageStatsManager == null) {
             return null;

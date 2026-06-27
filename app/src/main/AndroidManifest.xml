@@ -23,7 +23,7 @@
         tools:targetApi="m">
 
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.activity.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -33,7 +33,7 @@
         </activity>
 
         <service
-            android:name=".KeepAwakeOverlayService"
+            android:name=".service.KeepAwakeOverlayService"
             android:exported="false" />
     </application>
 

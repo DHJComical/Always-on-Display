@@ -1,4 +1,4 @@
-package com.dhj.always_on_display;
+package com.dhj.always_on_display.ui.adapter;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,6 +9,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.dhj.always_on_display.R;
+import com.dhj.always_on_display.model.AppInfo;
 import com.google.android.material.checkbox.MaterialCheckBox;
 
 import java.util.ArrayList;
@@ -16,8 +18,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-final class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHolder> {
-    interface OnSelectionChangedListener {
+public final class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHolder> {
+    public interface OnSelectionChangedListener {
         void onSelectionChanged(Set<String> selectedPackages);
     }
 
@@ -25,24 +27,24 @@ final class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHolde
     private final Set<String> selectedPackages = new HashSet<>();
     private final OnSelectionChangedListener listener;
 
-    AppListAdapter(Set<String> initialSelection, OnSelectionChangedListener listener) {
+    public AppListAdapter(Set<String> initialSelection, OnSelectionChangedListener listener) {
         if (initialSelection != null) {
             selectedPackages.addAll(initialSelection);
         }
         this.listener = listener;
     }
 
-    void submitList(List<AppInfo> appInfos) {
+    public void submitList(List<AppInfo> appInfos) {
         items.clear();
         items.addAll(appInfos);
         notifyDataSetChanged();
     }
 
-    int getSelectedCount() {
+    public int getSelectedCount() {
         return selectedPackages.size();
     }
 
-    Set<String> getSelectedPackages() {
+    public Set<String> getSelectedPackages() {
         return new HashSet<>(selectedPackages);
     }
 
@@ -56,17 +58,19 @@ final class AppListAdapter extends RecyclerView.Adapter<AppListAdapter.ViewHolde
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         AppInfo appInfo = items.get(position);
-        boolean checked = selectedPackages.contains(appInfo.packageName);
+        boolean checked = selectedPackages.contains(appInfo.getPackageName());
 
-        holder.iconView.setImageDrawable(appInfo.icon);
-        holder.nameView.setText(appInfo.appName);
-        holder.packageView.setText(holder.itemView.getContext().getString(R.string.package_name, appInfo.packageName));
+        holder.iconView.setImageDrawable(appInfo.getIcon());
+        holder.nameView.setText(appInfo.getAppName());
+        holder.packageView.setText(holder.itemView.getContext().getString(R.string.package_name, appInfo.getPackageName()));
 
         holder.checkBox.setOnCheckedChangeListener(null);
         holder.checkBox.setChecked(checked);
 
         holder.itemView.setOnClickListener(view -> holder.checkBox.toggle());
-        holder.checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> updateSelection(appInfo.packageName, isChecked));
+        holder.checkBox.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> updateSelection(appInfo.getPackageName(), isChecked)
+        );
     }
 
     @Override
