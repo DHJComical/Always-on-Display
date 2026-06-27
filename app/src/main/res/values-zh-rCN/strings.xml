@@ -1,15 +1,15 @@
 <resources>
     <string name="app_name">常亮助手</string>
-    <string name="xposed_description">通过 LSPosed 或兼容模式让选中的应用保持亮屏。</string>
+    <string name="xposed_description">通过前台感知的兼容模式让选中的应用保持亮屏。</string>
     <string name="module_status_title">常亮管理</string>
-    <string name="module_status_body">选择哪些应用需要触发常亮。LSPosed 模式更精准，兼容模式更适合会检测注入后闪退的游戏。</string>
+    <string name="module_status_body">选择哪些应用需要触发常亮。只有当前台应用属于你的已选列表时，才会保持屏幕常亮。</string>
     <string name="tab_intro">简介</string>
     <string name="tab_apps">应用</string>
     <string name="tab_settings">设置</string>
     <string name="intro_selected_title">已选应用</string>
-    <string name="intro_mode_title">兼容模式</string>
+    <string name="intro_mode_title">运行模式</string>
     <string name="intro_how_title">工作方式</string>
-    <string name="intro_how_body">LSPosed 模式会在作用域应用内直接添加常亮标记。兼容模式不注入目标应用，只在你选中的应用位于前台时挂载透明常亮窗口。</string>
+    <string name="intro_how_body">本应用不注入目标应用，只在你选中的应用位于前台时挂载透明常亮窗口。</string>
     <string name="apps_page_title">应用触发列表</string>
     <string name="settings_page_title">权限与控制</string>
     <string name="permissions_title">权限准备</string>
@@ -43,8 +43,8 @@
     <string name="intro_status_active">已为 %1$d 个应用启用</string>
     <string name="intro_status_idle">暂未选择应用</string>
     <string name="intro_info_title">概览</string>
-    <string name="intro_info_scope">LSPosed 作用域模式会直接在目标应用的 Activity 内保持亮屏。</string>
-    <string name="intro_info_overlay">兼容模式只会在已选应用位于前台时生效。</string>
+    <string name="intro_info_scope">前台检测会判断当前应用是否在你的已选列表中。</string>
+    <string name="intro_info_overlay">只有已选应用处于前台时，才会挂载透明常亮窗口。</string>
     <string name="intro_info_permissions">使用兼容模式前，请先授予悬浮窗和使用情况访问权限。</string>
     <string name="intro_action_title">快捷操作</string>
     <string name="intro_action_apps">管理应用列表</string>
@@ -55,6 +55,6 @@
     <string name="apps_empty_subtitle">换个关键词试试，或者清空搜索。</string>
     <string name="settings_card_permissions">权限状态</string>
     <string name="settings_card_mode">兼容模式</string>
-    <string name="settings_card_scope">作用域提醒</string>
-    <string name="settings_scope_body">LSPosed 模式仍然依赖你在模块作用域里勾选的应用。兼容模式则使用本应用中的列表。</string>
+    <string name="settings_card_scope">行为提醒</string>
+    <string name="settings_scope_body">只有你在本应用里选中的应用，才会触发常亮。离开这些应用后会自动停止常亮。</string>
 </resources>

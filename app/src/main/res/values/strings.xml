@@ -1,15 +1,15 @@
 <resources>
     <string name="app_name">Always On Display</string>
-    <string name="xposed_description">Keep selected apps awake with LSPosed hooks or compatibility mode.</string>
+    <string name="xposed_description">Keep selected apps awake with foreground-aware compatibility mode.</string>
     <string name="module_status_title">Screen awake manager</string>
-    <string name="module_status_body">Choose which apps should keep the display awake. LSPosed mode is more precise, while compatibility mode is safer for games that crash when they detect injection.</string>
+    <string name="module_status_body">Choose which apps should keep the display awake. The app keeps the screen awake only while one of your selected apps stays in the foreground.</string>
     <string name="tab_intro">Intro</string>
     <string name="tab_apps">Apps</string>
     <string name="tab_settings">Settings</string>
     <string name="intro_selected_title">Selected apps</string>
-    <string name="intro_mode_title">Compatibility mode</string>
+    <string name="intro_mode_title">Running mode</string>
     <string name="intro_how_title">How it works</string>
-    <string name="intro_how_body">LSPosed mode adds a keep-screen-on flag directly inside scoped apps. Compatibility mode avoids injection and keeps the screen awake only when one of your selected apps is currently in the foreground.</string>
+    <string name="intro_how_body">This app avoids injection and uses a transparent keep-awake window only while one of your selected apps is currently in the foreground.</string>
     <string name="apps_page_title">App trigger list</string>
     <string name="settings_page_title">Permissions and controls</string>
     <string name="permissions_title">Permissions</string>
@@ -43,8 +43,8 @@
     <string name="intro_status_active">Enabled for %1$d apps</string>
     <string name="intro_status_idle">No app selected yet</string>
     <string name="intro_info_title">Overview</string>
-    <string name="intro_info_scope">LSPosed scope keeps selected apps awake directly inside their activities.</string>
-    <string name="intro_info_overlay">Compatibility mode stays active only while one of the selected apps is in the foreground.</string>
+    <string name="intro_info_scope">Foreground detection checks whether the current app is in your selected list.</string>
+    <string name="intro_info_overlay">A transparent keep-awake window is attached only while a selected app is active.</string>
     <string name="intro_info_permissions">Grant overlay and usage access to use compatibility mode safely.</string>
     <string name="intro_action_title">Quick actions</string>
     <string name="intro_action_apps">Manage app list</string>
@@ -55,6 +55,6 @@
     <string name="apps_empty_subtitle">Try another keyword or clear the search.</string>
     <string name="settings_card_permissions">Permission status</string>
     <string name="settings_card_mode">Compatibility mode</string>
-    <string name="settings_card_scope">Scope reminder</string>
-    <string name="settings_scope_body">LSPosed mode still depends on the apps you add to the module scope. Compatibility mode uses the list in this app.</string>
+    <string name="settings_card_scope">Behavior reminder</string>
+    <string name="settings_scope_body">Only the apps in your selected list can trigger keep-awake behavior. Leaving those apps stops the keep-awake window automatically.</string>
 </resources>
