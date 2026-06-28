@@ -10,7 +10,6 @@ import android.os.SystemClock;
 import androidx.annotation.NonNull;
 
 import com.dhj.always_on_display.logging.DebugLog;
-import com.dhj.always_on_display.receiver.AutoStartReceiver;
 import com.dhj.always_on_display.system.BackgroundLaunchHelper;
 
 public final class KeepAwakeRestartScheduler {
@@ -32,6 +31,10 @@ public final class KeepAwakeRestartScheduler {
 
         long triggerAtMillis = SystemClock.elapsedRealtime() + RESTART_DELAY_MS;
         PendingIntent restartIntent = createRestartPendingIntent(context, PendingIntent.FLAG_UPDATE_CURRENT);
+        if (restartIntent == null) {
+            DebugLog.w(context, "Restart PendingIntent unavailable, cannot schedule restart: reason=" + reason);
+            return;
+        }
         boolean exactAlarmGranted = BackgroundLaunchHelper.canScheduleExactAlarms(context);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -76,9 +79,13 @@ public final class KeepAwakeRestartScheduler {
     }
 
     private static PendingIntent createRestartPendingIntent(@NonNull Context context, int extraFlags) {
-        Intent intent = new Intent(context, AutoStartReceiver.class)
-                .setAction(ACTION_RESTART_MONITOR);
+        Intent intent = new Intent(context, KeepAwakeOverlayService.class)
+                .setAction(KeepAwakeOverlayService.ACTION_START)
+                .setPackage(context.getPackageName());
         int flags = PendingIntent.FLAG_IMMUTABLE | extraFlags;
-        return PendingIntent.getBroadcast(context, REQUEST_CODE_RESTART, intent, flags);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return PendingIntent.getForegroundService(context, REQUEST_CODE_RESTART, intent, flags);
+        }
+        return PendingIntent.getService(context, REQUEST_CODE_RESTART, intent, flags);
     }
 }

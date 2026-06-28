@@ -45,6 +45,7 @@ public class KeepAwakeOverlayService extends Service {
     private boolean lastLoggedShouldKeepAwake;
     private int lastLoggedSelectionHash;
     private boolean hasLoggedDecision;
+    private boolean stopRequested;
 
     @Override
     public void onCreate() {
@@ -59,9 +60,11 @@ public class KeepAwakeOverlayService extends Service {
         DebugLog.i(this, "Service onStartCommand: action=" + action + ", startId=" + startId);
         if (ACTION_STOP.equals(action)) {
             DebugLog.i(this, "Received stop action");
+            stopRequested = true;
             stopOverlayWork();
             return START_NOT_STICKY;
         }
+        stopRequested = false;
 
         boolean overlayGranted = Settings.canDrawOverlays(this);
         boolean usageGranted = ForegroundAppMonitor.hasUsageAccess(this);
@@ -89,7 +92,10 @@ public class KeepAwakeOverlayService extends Service {
     @Override
     public void onDestroy() {
         DebugLog.i(this, "Service destroyed");
-        stopOverlayWork();
+        handler.removeCallbacks(foregroundCheck);
+        removeOverlay();
+        AppSelectorStore.setOverlayActive(this, false);
+        maybeScheduleRestartOnDestroy();
         super.onDestroy();
     }
 
@@ -187,8 +193,30 @@ public class KeepAwakeOverlayService extends Service {
         AppSelectorStore.setOverlayActive(this, false);
         hasLoggedDecision = false;
         lastLoggedForegroundPackage = null;
+        lastLoggedShouldKeepAwake = false;
+        lastLoggedSelectionHash = 0;
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
+    }
+
+    private void maybeScheduleRestartOnDestroy() {
+        hasLoggedDecision = false;
+        lastLoggedForegroundPackage = null;
+        lastLoggedShouldKeepAwake = false;
+        lastLoggedSelectionHash = 0;
+
+        if (stopRequested) {
+            DebugLog.i(this, "Skipping destroy restart scheduling because stop was requested explicitly");
+            return;
+        }
+
+        if (!KeepAwakeServiceController.shouldServiceBeRunning(this)) {
+            DebugLog.i(this, "Skipping destroy restart scheduling because monitor conditions are no longer satisfied");
+            return;
+        }
+
+        DebugLog.w(this, "Service destroyed unexpectedly, scheduling restart fallback");
+        KeepAwakeRestartScheduler.scheduleRestart(this, "service_destroyed");
     }
 
     private void logDecisionIfNeeded(Set<String> selectedPackages, String foregroundPackage, boolean shouldKeepAwake) {

@@ -15,11 +15,21 @@ public final class KeepAwakeServiceController {
     private KeepAwakeServiceController() {
     }
 
+    public static boolean shouldServiceBeRunning(Context context) {
+        Context appContext = context.getApplicationContext();
+        return Settings.canDrawOverlays(appContext)
+                && ForegroundAppMonitor.hasUsageAccess(appContext)
+                && !AppSelectorStore.readSelectedPackages(appContext).isEmpty();
+    }
+
     public static void syncService(Context context, String reason) {
         Context appContext = context.getApplicationContext();
         boolean overlayGranted = Settings.canDrawOverlays(appContext);
         boolean usageGranted = ForegroundAppMonitor.hasUsageAccess(appContext);
         int selectedCount = AppSelectorStore.readSelectedPackages(appContext).size();
+        boolean activeFlag = AppSelectorStore.isOverlayActive(appContext);
+        boolean serviceRunning = KeepAwakeServiceStatus.isRunning(appContext);
+        boolean shouldBeRunning = overlayGranted && usageGranted && selectedCount > 0;
 
         DebugLog.i(appContext, "Sync keep-awake monitor: reason="
                 + reason
@@ -30,11 +40,26 @@ public final class KeepAwakeServiceController {
                 + ", selectedCount="
                 + selectedCount
                 + ", active="
-                + AppSelectorStore.isOverlayActive(appContext));
+                + activeFlag
+                + ", serviceRunning="
+                + serviceRunning
+                + ", shouldBeRunning="
+                + shouldBeRunning);
 
-        if (overlayGranted && usageGranted && selectedCount > 0) {
+        if (shouldBeRunning) {
+            if (serviceRunning) {
+                if (!activeFlag) {
+                    AppSelectorStore.setOverlayActive(appContext, true);
+                }
+                DebugLog.d(appContext, "Keep-awake monitor already running, skipping start request");
+                return;
+            }
             requestStart(appContext, reason);
         } else {
+            if (!serviceRunning && !activeFlag) {
+                DebugLog.d(appContext, "Keep-awake monitor already stopped, skipping stop request");
+                return;
+            }
             requestStop(appContext, reason);
         }
     }
