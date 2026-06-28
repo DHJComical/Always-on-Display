@@ -75,16 +75,30 @@ jobs:
         id: config
         shell: bash
         run: |
+          RELEASE_ALLOWED="false"
+
+          if git show-ref --verify --quiet refs/remotes/origin/master; then
+            if git merge-base --is-ancestor "${{ github.sha }}" refs/remotes/origin/master; then
+              RELEASE_ALLOWED="true"
+            fi
+          fi
+
+          if [[ "${RELEASE_ALLOWED}" != "true" ]] && git show-ref --verify --quiet refs/remotes/origin/main; then
+            if git merge-base --is-ancestor "${{ github.sha }}" refs/remotes/origin/main; then
+              RELEASE_ALLOWED="true"
+            fi
+          fi
+
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             BUILD_TYPE="release"
-            PUBLISH_RELEASE="true"
+            PUBLISH_RELEASE="${RELEASE_ALLOWED}"
             RELEASE_TAG="${{ github.ref_name }}"
             CURRENT_REF="${{ github.ref_name }}"
             PREVIOUS_TAG_SOURCE="${{ github.ref_name }}^"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             BUILD_TYPE="${{ inputs.build_type }}"
             if [[ "${{ inputs.publish_release }}" == "true" ]]; then
-              PUBLISH_RELEASE="true"
+              PUBLISH_RELEASE="${RELEASE_ALLOWED}"
             else
               PUBLISH_RELEASE="false"
             fi
@@ -109,6 +123,7 @@ jobs:
 
           echo "build_type=${BUILD_TYPE}" >> "$GITHUB_OUTPUT"
           echo "publish_release=${PUBLISH_RELEASE}" >> "$GITHUB_OUTPUT"
+          echo "release_allowed=${RELEASE_ALLOWED}" >> "$GITHUB_OUTPUT"
           echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
           echo "current_ref=${CURRENT_REF}" >> "$GITHUB_OUTPUT"
           echo "previous_tag_source=${PREVIOUS_TAG_SOURCE}" >> "$GITHUB_OUTPUT"
@@ -116,6 +131,12 @@ jobs:
           echo "apk_dir=app/build/outputs/apk/${BUILD_TYPE}" >> "$GITHUB_OUTPUT"
           echo "artifact_basename=${ARTIFACT_BASENAME}" >> "$GITHUB_OUTPUT"
           echo "artifact_file=${ARTIFACT_BASENAME}.apk" >> "$GITHUB_OUTPUT"
+
+      - name: Explain skipped release publish
+        if: steps.config.outputs.build_type == 'release' && steps.config.outputs.publish_release != 'true'
+        shell: bash
+        run: |
+          echo "Release publishing skipped because ${GITHUB_SHA} is not on origin/master or origin/main."
 
       - name: Resolve version metadata
         id: version
