@@ -1,0 +1,125 @@
+name: Android Build
+
+on:
+  push:
+    paths-ignore:
+      - '**/*.md'
+      - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: Build type
+        required: true
+        default: debug
+        type: choice
+        options:
+          - debug
+          - release
+      publish_release:
+        description: Publish to GitHub Releases (release only)
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Resolve build config
+        id: config
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            BUILD_TYPE="${{ inputs.build_type }}"
+          else
+            BUILD_TYPE="debug"
+          fi
+
+          echo "build_type=${BUILD_TYPE}" >> "$GITHUB_OUTPUT"
+          echo "gradle_task=assemble${BUILD_TYPE^}" >> "$GITHUB_OUTPUT"
+          echo "apk_dir=app/build/outputs/apk/${BUILD_TYPE}" >> "$GITHUB_OUTPUT"
+          echo "artifact_file=${{ github.run_number }}.apk" >> "$GITHUB_OUTPUT"
+
+      - name: Make Gradle executable
+        run: chmod +x ./gradlew
+
+      - name: Build APK
+        run: ./gradlew ${{ steps.config.outputs.gradle_task }}
+
+      - name: Sign release APK
+        id: sign_release
+        if: steps.config.outputs.build_type == 'release' && env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_PASSWORD != ''
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: ${{ steps.config.outputs.apk_dir }}
+          signingKeyBase64: ${{ env.ANDROID_KEYSTORE_BASE64 }}
+          alias: ${{ env.ANDROID_KEY_ALIAS }}
+          keyStorePassword: ${{ env.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ env.ANDROID_KEY_PASSWORD }}
+
+      - name: Prepare artifact
+        id: artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+
+          if [[ "${{ steps.config.outputs.build_type }}" == "release" && -n "${{ steps.sign_release.outputs.signedReleaseFile }}" ]]; then
+            SOURCE_APK="${{ steps.sign_release.outputs.signedReleaseFile }}"
+          else
+            SOURCE_APK="$(find "${{ steps.config.outputs.apk_dir }}" -maxdepth 1 -type f -name "*.apk" | head -n 1)"
+          fi
+
+          if [[ -z "${SOURCE_APK}" ]]; then
+            echo "APK not found" >&2
+            exit 1
+          fi
+
+          TARGET_APK="dist/${{ steps.config.outputs.artifact_file }}"
+          cp "${SOURCE_APK}" "${TARGET_APK}"
+          echo "apk_path=${TARGET_APK}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.run_number }}
+          path: ${{ steps.artifact.outputs.apk_path }}
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: github.event_name == 'workflow_dispatch' && steps.config.outputs.build_type == 'release' && inputs.publish_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: release-${{ github.run_number }}
+          name: Release ${{ github.run_number }}
+          files: ${{ steps.artifact.outputs.apk_path }}
+          generate_release_notes: true
