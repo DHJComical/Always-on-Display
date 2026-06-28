@@ -21,7 +21,8 @@ import androidx.fragment.app.Fragment;
 import com.dhj.always_on_display.R;
 import com.dhj.always_on_display.data.AppSelectorStore;
 import com.dhj.always_on_display.logging.DebugLog;
-import com.dhj.always_on_display.monitor.ForegroundAppMonitor;
+import com.dhj.always_on_display.monitor.AccessibilityMonitor;
+import com.dhj.always_on_display.monitor.OverlayPermissionMonitor;
 import com.dhj.always_on_display.service.KeepAwakeServiceController;
 import com.dhj.always_on_display.system.BackgroundLaunchHelper;
 import com.google.android.material.button.MaterialButton;
@@ -29,7 +30,7 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 
 public class SettingsFragment extends Fragment {
     private TextView overlayPermissionStatus;
-    private TextView usagePermissionStatus;
+    private TextView accessibilityPermissionStatus;
     private TextView notificationPermissionStatus;
     private TextView exactAlarmPermissionStatus;
     private TextView batteryOptimizationStatus;
@@ -63,7 +64,7 @@ public class SettingsFragment extends Fragment {
 
     private void bindViews(@NonNull View view) {
         overlayPermissionStatus = view.findViewById(R.id.overlayPermissionStatus);
-        usagePermissionStatus = view.findViewById(R.id.usagePermissionStatus);
+        accessibilityPermissionStatus = view.findViewById(R.id.accessibilityPermissionStatus);
         notificationPermissionStatus = view.findViewById(R.id.notificationPermissionStatus);
         exactAlarmPermissionStatus = view.findViewById(R.id.exactAlarmPermissionStatus);
         batteryOptimizationStatus = view.findViewById(R.id.batteryOptimizationStatus);
@@ -73,29 +74,32 @@ public class SettingsFragment extends Fragment {
 
     private void setupActions(@NonNull View view) {
         MaterialButton overlayPermissionButton = view.findViewById(R.id.overlayPermissionButton);
-        MaterialButton usagePermissionButton = view.findViewById(R.id.usagePermissionButton);
+        MaterialButton accessibilityPermissionButton = view.findViewById(R.id.accessibilityPermissionButton);
         MaterialButton notificationPermissionButton = view.findViewById(R.id.notificationPermissionButton);
         MaterialButton exactAlarmPermissionButton = view.findViewById(R.id.exactAlarmPermissionButton);
         MaterialButton batteryOptimizationButton = view.findViewById(R.id.batteryOptimizationButton);
 
         overlayPermissionButton.setOnClickListener(v -> requestOverlayPermission());
-        usagePermissionButton.setOnClickListener(v -> requestUsageAccessPermission());
+        accessibilityPermissionButton.setOnClickListener(v -> requestAccessibilityPermission());
         notificationPermissionButton.setOnClickListener(v -> requestNotificationPermission());
         exactAlarmPermissionButton.setOnClickListener(v -> requestExactAlarmPermission());
         batteryOptimizationButton.setOnClickListener(v -> requestBatteryOptimizationExemption());
         debugLoggingSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> onDebugLoggingChanged(isChecked));
     }
 
+    private void requestAccessibilityPermission() {
+        startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+    }
+
     private void requestOverlayPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return;
+        }
         Intent intent = new Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:" + requireContext().getPackageName())
         );
         startActivity(intent);
-    }
-
-    private void requestUsageAccessPermission() {
-        startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
     }
 
     private void requestNotificationPermission() {
@@ -114,8 +118,7 @@ public class SettingsFragment extends Fragment {
 
     private void requestExactAlarmPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !BackgroundLaunchHelper.canScheduleExactAlarms(requireContext())) {
-            Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                    .setData(Uri.parse("package:" + requireContext().getPackageName()));
+            Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
             startActivity(intent);
             return;
         }
@@ -124,9 +127,7 @@ public class SettingsFragment extends Fragment {
 
     private void openAlarmsAndRemindersSettings() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                    .setData(Uri.parse("package:" + requireContext().getPackageName()));
-            startActivity(intent);
+            startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM));
         }
     }
 
@@ -134,7 +135,7 @@ public class SettingsFragment extends Fragment {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
                 && !BackgroundLaunchHelper.isIgnoringBatteryOptimizations(requireContext())) {
             Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                    .setData(Uri.parse("package:" + requireContext().getPackageName()));
+                    .setData(android.net.Uri.parse("package:" + requireContext().getPackageName()));
             startActivity(intent);
             return;
         }
@@ -148,16 +149,16 @@ public class SettingsFragment extends Fragment {
     }
 
     private void updateStatus() {
-        boolean overlayGranted = Settings.canDrawOverlays(requireContext());
-        boolean usageGranted = ForegroundAppMonitor.hasUsageAccess(requireContext());
+        boolean overlayEnabled = OverlayPermissionMonitor.canDrawOverlays(requireContext());
+        boolean accessibilityEnabled = AccessibilityMonitor.isAccessibilityServiceEnabled(requireContext());
         boolean notificationsGranted = hasNotificationPermission();
         boolean exactAlarmGranted = BackgroundLaunchHelper.canScheduleExactAlarms(requireContext());
         boolean batteryOptimizationIgnored = BackgroundLaunchHelper.isIgnoringBatteryOptimizations(requireContext());
 
-        overlayPermissionStatus.setText(overlayGranted
+        overlayPermissionStatus.setText(overlayEnabled
                 ? getString(R.string.permission_granted)
                 : getString(R.string.permission_required));
-        usagePermissionStatus.setText(usageGranted
+        accessibilityPermissionStatus.setText(accessibilityEnabled
                 ? getString(R.string.permission_granted)
                 : getString(R.string.permission_required));
         notificationPermissionStatus.setText(getString(

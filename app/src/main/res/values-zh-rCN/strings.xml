@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">常亮助手</string>
-    <string name="xposed_description">通过自动前台监控让选中的应用保持亮屏。</string>
+    <string name="xposed_description">通过无障碍前台识别和透明覆盖层让选中的应用保持亮屏。</string>
     <string name="module_status_title">常亮管理</string>
     <string name="module_status_body">选择哪些应用需要触发常亮。只有当前台应用属于你的已选列表时，才会保持屏幕常亮。</string>
     <string name="tab_intro">简介</string>
@@ -9,13 +9,13 @@
     <string name="intro_selected_title">已选应用</string>
     <string name="intro_mode_title">监控状态</string>
     <string name="intro_how_title">工作方式</string>
-    <string name="intro_how_body">本应用不注入目标应用，只在你选中的应用位于前台时挂载透明常亮窗口。</string>
+    <string name="intro_how_body">本应用不注入目标应用，而是通过无障碍服务识别前台窗口变化，只在你选中的应用位于前台时保持亮屏。</string>
     <string name="apps_page_title">应用触发列表</string>
     <string name="settings_page_title">权限与控制</string>
     <string name="permissions_title">权限准备</string>
-    <string name="permissions_summary">自动监控需要悬浮窗权限和使用情况访问权限；在 Android 13 及以上，通知权限有助于让前台常驻通知保持可见。</string>
+    <string name="permissions_summary">自动监控需要悬浮窗和无障碍服务权限；在 Android 13 及以上，通知权限有助于让前台常驻通知保持可见。</string>
     <string name="permission_overlay_title">悬浮窗权限</string>
-    <string name="permission_usage_title">使用情况访问权限</string>
+    <string name="permission_accessibility_title">无障碍服务</string>
     <string name="permission_notification_title">通知权限</string>
     <string name="permission_exact_alarm_title">精确闹钟权限</string>
     <string name="permission_battery_optimization_title">电池优化</string>
@@ -23,21 +23,21 @@
     <string name="permission_required">未授权</string>
     <string name="permission_recommended">建议授权</string>
     <string name="permission_not_required">无需授权</string>
-    <string name="permission_button_overlay">去授权悬浮窗</string>
-    <string name="permission_button_usage">去授权使用情况访问</string>
+    <string name="permission_button_overlay">允许悬浮窗</string>
+    <string name="permission_button_accessibility">去开启无障碍服务</string>
     <string name="permission_button_notification">允许通知</string>
     <string name="permission_button_exact_alarm">允许精确闹钟</string>
     <string name="permission_button_battery_optimization">忽略电池优化</string>
     <string name="overlay_mode_title">自动监控</string>
-    <string name="overlay_mode_body">授予权限并选中应用后，后台监控会自动启动，仅当前台应用属于你勾选的列表时才会挂载透明常亮窗口，离开这些应用后会自动停止常亮。</string>
+    <string name="overlay_mode_body">开启悬浮窗和无障碍服务并选中应用后，后台监控会自动启动，仅当前台应用属于你勾选的列表时才会挂上极小透明常亮窗口，离开这些应用后会自动取消常亮。</string>
     <string name="debug_logging_title">调试日志</string>
-    <string name="debug_logging_body">把后台监控的判断过程写入 logcat，方便排查为什么没有生效。</string>
+    <string name="debug_logging_body">把无障碍事件和常亮判断过程写入 logcat，方便排查为什么没有生效。</string>
     <string name="foreground_service_channel_name">常亮监控</string>
-    <string name="foreground_service_channel_description">在监控前台应用时保持后台监控持续运行。</string>
-    <string name="foreground_service_notification_title">常亮监控正在运行</string>
-    <string name="foreground_service_notification_text">正在监控前台应用，以便让选中的应用保持常亮。</string>
+    <string name="foreground_service_channel_description">在监控前台应用变化时保持后台监控持续运行。</string>
+    <string name="foreground_service_notification_title">常亮监控已启用</string>
+    <string name="foreground_service_notification_text">正在监控前台应用变化，以便让选中的应用保持常亮。</string>
     <string name="foreground_service_notification_action_stop">停止</string>
-    <string name="foreground_service_special_use_reason">仅在选中的应用处于前台时，保持透明常亮覆盖层工作。</string>
+    <string name="foreground_service_special_use_reason">仅在选中的应用处于前台时，保持透明常亮窗口工作。</string>
     <string name="toast_debug_logging_enabled">调试日志已开启</string>
     <string name="toast_debug_logging_disabled">调试日志已关闭</string>
     <string name="toast_select_apps_first">请先选择至少一个应用</string>
@@ -46,7 +46,7 @@
     <string name="monitor_status_starting">启动中</string>
     <string name="monitor_status_no_apps">未选择应用</string>
     <string name="monitor_status_overlay_required">需要悬浮窗权限</string>
-    <string name="monitor_status_usage_required">需要使用情况访问权限</string>
+    <string name="monitor_status_accessibility_required">需要无障碍服务权限</string>
     <string name="selected_apps_title">触发常亮的应用</string>
     <string name="selected_apps_summary">后台监控只会在这些应用位于前台时保持屏幕常亮，避免在桌面、设置等场景误触发。</string>
     <string name="search_hint">搜索应用名称或包名</string>
@@ -61,8 +61,8 @@
     <string name="intro_status_idle">暂未选择应用</string>
     <string name="intro_info_title">概览</string>
     <string name="intro_info_scope">前台检测会判断当前应用是否在你的已选列表中。</string>
-    <string name="intro_info_overlay">只有已选应用处于前台时，才会挂载透明常亮窗口。</string>
-    <string name="intro_info_permissions">请先授予悬浮窗和使用情况访问权限，后台监控会在条件满足后自动运行。</string>
+    <string name="intro_info_overlay">只有已选应用处于前台时，才会挂上极小透明常亮窗口。</string>
+    <string name="intro_info_permissions">请先开启悬浮窗和无障碍服务，后台监控会在条件满足后自动运行。</string>
     <string name="intro_action_title">快捷操作</string>
     <string name="intro_action_apps">管理应用列表</string>
     <string name="intro_action_settings">打开设置</string>
@@ -73,5 +73,8 @@
     <string name="settings_card_permissions">权限状态</string>
     <string name="settings_card_mode">自动监控</string>
     <string name="settings_card_scope">行为提醒</string>
-    <string name="settings_scope_body">只有你在本应用里选中的应用，才会触发常亮。离开这些应用后会自动停止常亮。</string>
+    <string name="settings_scope_body">只有你在本应用里选中的应用，才会触发常亮。离开这些应用后会自动移除透明常亮窗口。</string>
+    <string name="accessibility_service_title">常亮助手无障碍服务</string>
+    <string name="accessibility_service_description">用于识别前台应用变化，让选中的应用在前台时保持亮屏。</string>
+    <string name="accessibility_service_summary">仅用于检测已选应用何时进入或离开前台。</string>
 </resources>

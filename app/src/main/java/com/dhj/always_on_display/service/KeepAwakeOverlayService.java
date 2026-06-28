@@ -10,21 +10,19 @@ import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Build;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
-import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 
-import com.dhj.always_on_display.data.AppSelectorStore;
-import com.dhj.always_on_display.logging.DebugLog;
-import com.dhj.always_on_display.monitor.ForegroundAppMonitor;
-import com.dhj.always_on_display.ui.activity.MainActivity;
-
 import androidx.core.app.NotificationCompat;
+
+import com.dhj.always_on_display.data.AppSelectorStore;
+import com.dhj.always_on_display.data.ForegroundAppStore;
+import com.dhj.always_on_display.logging.DebugLog;
+import com.dhj.always_on_display.monitor.OverlayPermissionMonitor;
+import com.dhj.always_on_display.ui.activity.MainActivity;
 
 import java.util.Set;
 
@@ -32,12 +30,9 @@ public class KeepAwakeOverlayService extends Service {
     public static final String ACTION_START = "com.dhj.always_on_display.action.START_KEEP_AWAKE_OVERLAY";
     public static final String ACTION_STOP = "com.dhj.always_on_display.action.STOP_KEEP_AWAKE_OVERLAY";
 
-    private static final long CHECK_INTERVAL_MS = 1200L;
+    private static final long FOREGROUND_EVENT_FRESHNESS_MS = 10_000L;
     private static final String NOTIFICATION_CHANNEL_ID = "keep_awake_monitor";
     private static final int NOTIFICATION_ID = 1001;
-
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    private final Runnable foregroundCheck = this::refreshOverlayState;
 
     private WindowManager windowManager;
     private View overlayView;
@@ -66,13 +61,9 @@ public class KeepAwakeOverlayService extends Service {
         }
         stopRequested = false;
 
-        boolean overlayGranted = Settings.canDrawOverlays(this);
-        boolean usageGranted = ForegroundAppMonitor.hasUsageAccess(this);
-        if (!overlayGranted || !usageGranted) {
-            DebugLog.w(this, "Cannot start keep-awake monitor: overlay="
-                    + overlayGranted
-                    + ", usageAccess="
-                    + usageGranted);
+        if (!KeepAwakeServiceController.shouldServiceBeRunning(this)) {
+            DebugLog.w(this, "Cannot start keep-awake monitor because accessibility scope is not ready");
+            removeOverlay();
             AppSelectorStore.setOverlayActive(this, false);
             stopSelf();
             return START_NOT_STICKY;
@@ -84,15 +75,14 @@ public class KeepAwakeOverlayService extends Service {
                 + AppSelectorStore.readSelectedPackages(this).size()
                 + " selected packages");
         AppSelectorStore.setOverlayActive(this, true);
-        handler.removeCallbacks(foregroundCheck);
-        handler.post(foregroundCheck);
+        String reason = intent == null ? "service_start" : intent.getStringExtra("start_reason");
+        refreshOverlayState(reason == null ? "service_start" : reason);
         return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
         DebugLog.i(this, "Service destroyed");
-        handler.removeCallbacks(foregroundCheck);
         removeOverlay();
         AppSelectorStore.setOverlayActive(this, false);
         maybeScheduleRestartOnDestroy();
@@ -111,14 +101,17 @@ public class KeepAwakeOverlayService extends Service {
         return null;
     }
 
-    private void refreshOverlayState() {
-        boolean overlayGranted = Settings.canDrawOverlays(this);
-        boolean usageGranted = ForegroundAppMonitor.hasUsageAccess(this);
-        if (!overlayGranted || !usageGranted) {
-            DebugLog.w(this, "Stopping keep-awake monitor because required permissions are missing: overlay="
-                    + overlayGranted
-                    + ", usageAccess="
-                    + usageGranted);
+    private void refreshOverlayState(String reason) {
+        if (!KeepAwakeServiceController.shouldServiceBeRunning(this)) {
+            DebugLog.w(this, "Stopping keep-awake monitor because required scope is no longer valid");
+            removeOverlay();
+            AppSelectorStore.setOverlayActive(this, false);
+            stopSelf();
+            return;
+        }
+
+        if (!OverlayPermissionMonitor.canDrawOverlays(this)) {
+            DebugLog.w(this, "Stopping keep-awake monitor because overlay permission is missing");
             removeOverlay();
             AppSelectorStore.setOverlayActive(this, false);
             stopSelf();
@@ -126,17 +119,30 @@ public class KeepAwakeOverlayService extends Service {
         }
 
         Set<String> selectedPackages = AppSelectorStore.readSelectedPackages(this);
-        String foregroundPackage = ForegroundAppMonitor.getForegroundPackageName(this);
+        String foregroundPackage = ForegroundAppStore.readForegroundPackage(this);
+        long lastEventUptimeMillis = ForegroundAppStore.readLastEventUptimeMillis(this);
+        long nowUptimeMillis = android.os.SystemClock.uptimeMillis();
+        boolean foregroundFresh = nowUptimeMillis - lastEventUptimeMillis <= FOREGROUND_EVENT_FRESHNESS_MS;
+        if (!foregroundFresh) {
+            foregroundPackage = null;
+        }
+
         boolean shouldKeepAwake = foregroundPackage != null && selectedPackages.contains(foregroundPackage);
-        logDecisionIfNeeded(selectedPackages, foregroundPackage, shouldKeepAwake);
+        logDecisionIfNeeded(
+                selectedPackages,
+                foregroundPackage,
+                shouldKeepAwake,
+                reason,
+                lastEventUptimeMillis,
+                nowUptimeMillis,
+                foregroundFresh
+        );
 
         if (shouldKeepAwake) {
             showOverlay();
         } else {
             removeOverlay();
         }
-
-        handler.postDelayed(foregroundCheck, CHECK_INTERVAL_MS);
     }
 
     private void showOverlay() {
@@ -144,15 +150,15 @@ public class KeepAwakeOverlayService extends Service {
             return;
         }
 
-        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        windowManager = getSystemService(WindowManager.class);
         if (windowManager == null) {
             DebugLog.w(this, "WindowManager unavailable, cannot attach overlay");
             return;
         }
 
-        overlayView = new View(this);
-        overlayView.setBackgroundColor(Color.TRANSPARENT);
-        overlayView.setKeepScreenOn(true);
+        View view = new View(this);
+        view.setBackgroundColor(Color.TRANSPARENT);
+        view.setKeepScreenOn(true);
 
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 1,
@@ -160,15 +166,18 @@ public class KeepAwakeOverlayService extends Service {
                 getOverlayWindowType(),
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
                         | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                        | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT
         );
         params.gravity = Gravity.START | Gravity.TOP;
         params.alpha = 0.01f;
+        params.setTitle(getPackageName() + ":keep-awake-overlay");
 
         try {
-            windowManager.addView(overlayView, params);
-            DebugLog.i(this, "Overlay attached");
+            windowManager.addView(view, params);
+            overlayView = view;
+            DebugLog.i(this, "Overlay attached with keep-screen-on flag");
         } catch (RuntimeException e) {
             DebugLog.e(this, "Failed to attach overlay", e);
             overlayView = null;
@@ -188,7 +197,6 @@ public class KeepAwakeOverlayService extends Service {
     }
 
     private void stopOverlayWork() {
-        handler.removeCallbacks(foregroundCheck);
         removeOverlay();
         AppSelectorStore.setOverlayActive(this, false);
         hasLoggedDecision = false;
@@ -219,7 +227,15 @@ public class KeepAwakeOverlayService extends Service {
         KeepAwakeRestartScheduler.scheduleRestart(this, "service_destroyed");
     }
 
-    private void logDecisionIfNeeded(Set<String> selectedPackages, String foregroundPackage, boolean shouldKeepAwake) {
+    private void logDecisionIfNeeded(
+            Set<String> selectedPackages,
+            String foregroundPackage,
+            boolean shouldKeepAwake,
+            String reason,
+            long lastEventUptimeMillis,
+            long nowUptimeMillis,
+            boolean foregroundFresh
+    ) {
         int selectionHash = selectedPackages.hashCode();
         boolean changed = !hasLoggedDecision
                 || shouldKeepAwake != lastLoggedShouldKeepAwake
@@ -236,7 +252,15 @@ public class KeepAwakeOverlayService extends Service {
                 + ", overlayAttached="
                 + (overlayView != null)
                 + ", shouldKeepAwake="
-                + shouldKeepAwake);
+                + shouldKeepAwake
+                + ", reason="
+                + reason
+                + ", lastEventUptimeMillis="
+                + lastEventUptimeMillis
+                + ", nowUptimeMillis="
+                + nowUptimeMillis
+                + ", foregroundFresh="
+                + foregroundFresh);
         lastLoggedForegroundPackage = foregroundPackage;
         lastLoggedShouldKeepAwake = shouldKeepAwake;
         lastLoggedSelectionHash = selectionHash;

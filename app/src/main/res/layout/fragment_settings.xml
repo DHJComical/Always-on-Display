@@ -77,8 +77,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/spacing_xsmall"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textAppearance="?attr/textAppearanceBodyMedium" />
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/overlayPermissionButton"
@@ -92,24 +92,24 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/spacing_normal"
-                        android:text="@string/permission_usage_title"
+                        android:text="@string/permission_accessibility_title"
                         android:textAppearance="?attr/textAppearanceBodyLarge" />
 
                     <TextView
-                        android:id="@+id/usagePermissionStatus"
+                        android:id="@+id/accessibilityPermissionStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/spacing_xsmall"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textAppearance="?attr/textAppearanceBodyMedium" />
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/usagePermissionButton"
+                        android:id="@+id/accessibilityPermissionButton"
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/spacing_small"
-                        android:text="@string/permission_button_usage" />
+                        android:text="@string/permission_button_accessibility" />
 
                     <TextView
                         android:layout_width="wrap_content"

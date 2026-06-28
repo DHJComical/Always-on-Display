@@ -2,14 +2,14 @@ package com.dhj.always_on_display.service;
 
 import android.content.Context;
 import android.content.Intent;
-import android.provider.Settings;
 
 import androidx.core.content.ContextCompat;
 
 import com.dhj.always_on_display.R;
 import com.dhj.always_on_display.data.AppSelectorStore;
 import com.dhj.always_on_display.logging.DebugLog;
-import com.dhj.always_on_display.monitor.ForegroundAppMonitor;
+import com.dhj.always_on_display.monitor.AccessibilityMonitor;
+import com.dhj.always_on_display.monitor.OverlayPermissionMonitor;
 
 public final class KeepAwakeServiceController {
     private KeepAwakeServiceController() {
@@ -17,26 +17,26 @@ public final class KeepAwakeServiceController {
 
     public static boolean shouldServiceBeRunning(Context context) {
         Context appContext = context.getApplicationContext();
-        return Settings.canDrawOverlays(appContext)
-                && ForegroundAppMonitor.hasUsageAccess(appContext)
+        return AccessibilityMonitor.isAccessibilityServiceEnabled(appContext)
+                && OverlayPermissionMonitor.canDrawOverlays(appContext)
                 && !AppSelectorStore.readSelectedPackages(appContext).isEmpty();
     }
 
     public static void syncService(Context context, String reason) {
         Context appContext = context.getApplicationContext();
-        boolean overlayGranted = Settings.canDrawOverlays(appContext);
-        boolean usageGranted = ForegroundAppMonitor.hasUsageAccess(appContext);
+        boolean accessibilityEnabled = AccessibilityMonitor.isAccessibilityServiceEnabled(appContext);
+        boolean overlayEnabled = OverlayPermissionMonitor.canDrawOverlays(appContext);
         int selectedCount = AppSelectorStore.readSelectedPackages(appContext).size();
         boolean activeFlag = AppSelectorStore.isOverlayActive(appContext);
         boolean serviceRunning = KeepAwakeServiceStatus.isRunning(appContext);
-        boolean shouldBeRunning = overlayGranted && usageGranted && selectedCount > 0;
+        boolean shouldBeRunning = accessibilityEnabled && overlayEnabled && selectedCount > 0;
 
         DebugLog.i(appContext, "Sync keep-awake monitor: reason="
                 + reason
+                + ", accessibility="
+                + accessibilityEnabled
                 + ", overlay="
-                + overlayGranted
-                + ", usageAccess="
-                + usageGranted
+                + overlayEnabled
                 + ", selectedCount="
                 + selectedCount
                 + ", active="
@@ -64,13 +64,38 @@ public final class KeepAwakeServiceController {
         }
     }
 
+    public static void refreshServiceState(Context context, String reason) {
+        Context appContext = context.getApplicationContext();
+        boolean accessibilityEnabled = AccessibilityMonitor.isAccessibilityServiceEnabled(appContext);
+        boolean overlayEnabled = OverlayPermissionMonitor.canDrawOverlays(appContext);
+        int selectedCount = AppSelectorStore.readSelectedPackages(appContext).size();
+        boolean shouldBeRunning = accessibilityEnabled && overlayEnabled && selectedCount > 0;
+
+        DebugLog.d(appContext, "Refresh keep-awake monitor: reason="
+                + reason
+                + ", accessibility="
+                + accessibilityEnabled
+                + ", overlay="
+                + overlayEnabled
+                + ", selectedCount="
+                + selectedCount
+                + ", serviceRunning="
+                + KeepAwakeServiceStatus.isRunning(appContext));
+
+        if (shouldBeRunning) {
+            requestStart(appContext, reason);
+        } else {
+            requestStop(appContext, reason);
+        }
+    }
+
     public static int getStatusLabelResId(Context context) {
         Context appContext = context.getApplicationContext();
-        if (!Settings.canDrawOverlays(appContext)) {
-            return R.string.monitor_status_overlay_required;
+        if (!AccessibilityMonitor.isAccessibilityServiceEnabled(appContext)) {
+            return R.string.monitor_status_accessibility_required;
         }
-        if (!ForegroundAppMonitor.hasUsageAccess(appContext)) {
-            return R.string.monitor_status_usage_required;
+        if (!OverlayPermissionMonitor.canDrawOverlays(appContext)) {
+            return R.string.monitor_status_overlay_required;
         }
         if (AppSelectorStore.readSelectedPackages(appContext).isEmpty()) {
             return R.string.monitor_status_no_apps;
@@ -87,6 +112,7 @@ public final class KeepAwakeServiceController {
                     context,
                     new Intent(context, KeepAwakeOverlayService.class)
                             .setAction(KeepAwakeOverlayService.ACTION_START)
+                            .putExtra("start_reason", reason)
             );
             AppSelectorStore.setOverlayActive(context, true);
             DebugLog.i(context, "Start request sent: reason=" + reason);
