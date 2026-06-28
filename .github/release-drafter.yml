@@ -11,9 +11,9 @@ template: |
 
   $CHANGES
 
-  ## Previous Tag
+  ## Contributors
 
-  $PREVIOUS_TAG
+  $CONTRIBUTORS
 
 categories:
   - title: Features

@@ -190,118 +190,14 @@ jobs:
           tag: ${{ steps.config.outputs.release_tag }}
           version: ${{ steps.version.outputs.version_name }}
           name: ${{ env.APP_NAME }} ${{ steps.config.outputs.release_tag }}
-          commitish: ${{ github.sha }}
+          footer: |
+            ## Build Info
 
-      - name: Prepare release notes
-        id: release_notes
-        if: steps.config.outputs.publish_release == 'true'
-        shell: bash
-        env:
-          RELEASE_DRAFTER_BODY: ${{ steps.release_drafter.outputs.body }}
-        run: |
-          NOTES_FILE="dist/release-notes.md"
-          CURRENT_REF="${{ steps.config.outputs.current_ref }}"
-          PREVIOUS_TAG="$(git describe --tags --abbrev=0 "${{ steps.config.outputs.previous_tag_source }}" 2>/dev/null || true)"
-
-          printf '%s\n' "${RELEASE_DRAFTER_BODY}" > "${NOTES_FILE}"
-
-          if [[ -n "${PREVIOUS_TAG}" ]]; then
-            CHANGELOG_RANGE="${PREVIOUS_TAG}..${CURRENT_REF}"
-          else
-            CHANGELOG_RANGE="${CURRENT_REF}"
-          fi
-
-          {
-            echo ""
-            echo "## Build Info"
-            echo ""
-            echo "- Tag: \`${{ steps.config.outputs.release_tag }}\`"
-            echo "- Workflow Run: \`${{ github.run_number }}\`"
-            echo "- Version Name: \`${{ steps.version.outputs.version_name }}\`"
-            echo "- Version Code: \`${{ steps.version.outputs.version_code }}\`"
-            echo "- APK: \`${{ steps.config.outputs.artifact_file }}\`"
-            echo ""
-            echo "## Direct Commits"
-            if [[ -n "${PREVIOUS_TAG}" ]]; then
-              echo ""
-              echo "From \`${PREVIOUS_TAG}\` to \`${{ steps.config.outputs.release_tag }}\`"
-            fi
-            echo ""
-            git log "${CHANGELOG_RANGE}" --pretty=format:"- %s (%h)"
-          } >> "${NOTES_FILE}"
-
-          echo "notes_path=${NOTES_FILE}" >> "$GITHUB_OUTPUT"
-
-      - name: Collect release contributors
-        id: contributors
-        if: steps.config.outputs.publish_release == 'true'
-        uses: actions/github-script@v7
-        env:
-          CURRENT_REF: ${{ steps.config.outputs.current_ref }}
-          PREVIOUS_TAG_SOURCE: ${{ steps.config.outputs.previous_tag_source }}
-        with:
-          script: |
-            const { execSync } = require('child_process');
-            const fs = require('fs');
-            const currentRef = process.env.CURRENT_REF;
-            const previousTagSource = process.env.PREVIOUS_TAG_SOURCE;
-            let previousTag = '';
-
-            try {
-              previousTag = execSync(`git describe --tags --abbrev=0 ${previousTagSource}`, { encoding: 'utf8' }).trim();
-            } catch (error) {
-              previousTag = '';
-            }
-
-            const range = previousTag ? `${previousTag}..${currentRef}` : currentRef;
-            const shas = execSync(`git rev-list ${range}`, { encoding: 'utf8' })
-              .split('\n')
-              .map((line) => line.trim())
-              .filter(Boolean);
-
-            const seen = new Map();
-            for (const sha of shas) {
-              const commit = (
-                await github.rest.repos.getCommit({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  ref: sha,
-                })
-              ).data;
-
-              const author = commit.author;
-              if (!author || seen.has(author.login)) {
-                continue;
-              }
-
-              const avatarUrl = `${author.avatar_url}${author.avatar_url.includes('?') ? '&' : '?'}s=40`;
-              seen.set(
-                author.login,
-                `<img src="${avatarUrl}" width="20" height="20" alt="@${author.login}" /> [@${author.login}](${author.html_url})`
-              );
-            }
-
-            const contributorFile = 'dist/contributors.md';
-            fs.mkdirSync('dist', { recursive: true });
-            fs.writeFileSync(
-              contributorFile,
-              seen.size > 0
-                ? Array.from(seen.values()).join(', ')
-                : 'No contributors\n',
-              'utf8'
-            );
-            core.setOutput('contributors_path', contributorFile);
-
-      - name: Append contributors to release notes
-        if: steps.config.outputs.publish_release == 'true'
-        shell: bash
-        run: |
-          {
-            echo ""
-            echo "## Contributors"
-            echo ""
-            cat "${{ steps.contributors.outputs.contributors_path }}"
-          } >> "${{ steps.release_notes.outputs.notes_path }}"
+            - Tag: `${{ steps.config.outputs.release_tag }}`
+            - Workflow Run: `${{ github.run_number }}`
+            - Version Name: `${{ steps.version.outputs.version_name }}`
+            - Version Code: `${{ steps.version.outputs.version_code }}`
+            - APK: `${{ steps.config.outputs.artifact_file }}`
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -317,7 +213,7 @@ jobs:
           RELEASE_TAG: ${{ steps.config.outputs.release_tag }}
           RELEASE_NAME: ${{ env.APP_NAME }} ${{ steps.config.outputs.release_tag }}
           RELEASE_TARGET: ${{ github.sha }}
-          RELEASE_BODY_PATH: ${{ steps.release_notes.outputs.notes_path }}
+          RELEASE_BODY: ${{ steps.release_drafter.outputs.body }}
           RELEASE_ASSET_PATH: ${{ steps.artifact.outputs.apk_path }}
           RELEASE_ASSET_NAME: ${{ steps.config.outputs.artifact_file }}
         with:
@@ -329,7 +225,7 @@ jobs:
             const releaseTag = process.env.RELEASE_TAG;
             const releaseName = process.env.RELEASE_NAME;
             const releaseTarget = process.env.RELEASE_TARGET;
-            const body = fs.readFileSync(process.env.RELEASE_BODY_PATH, 'utf8');
+            const body = process.env.RELEASE_BODY || '';
             const assetPath = process.env.RELEASE_ASSET_PATH;
             const assetName = process.env.RELEASE_ASSET_NAME;
             const assetData = fs.readFileSync(assetPath);
