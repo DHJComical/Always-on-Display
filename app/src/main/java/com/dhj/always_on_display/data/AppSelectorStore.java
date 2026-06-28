@@ -12,6 +12,7 @@ public final class AppSelectorStore {
     public static final String KEY_SELECTED_PACKAGES = "selected_packages";
     public static final String KEY_OVERLAY_ACTIVE = "overlay_active";
     public static final String KEY_DEBUG_LOGGING = "debug_logging";
+    public static final String KEY_APP_ENABLED = "app_enabled";
 
     private AppSelectorStore() {
     }
@@ -45,5 +46,15 @@ public final class AppSelectorStore {
     public static void setDebugLoggingEnabled(Context context, boolean enabled) {
         SharedPreferences preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         preferences.edit().putBoolean(KEY_DEBUG_LOGGING, enabled).apply();
+    }
+
+    public static boolean isAppEnabled(Context context) {
+        SharedPreferences preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return preferences.getBoolean(KEY_APP_ENABLED, true);
+    }
+
+    public static void setAppEnabled(Context context, boolean enabled) {
+        SharedPreferences preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        preferences.edit().putBoolean(KEY_APP_ENABLED, enabled).apply();
     }
 }

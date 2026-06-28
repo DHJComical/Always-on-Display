@@ -17,22 +17,26 @@ public final class KeepAwakeServiceController {
 
     public static boolean shouldServiceBeRunning(Context context) {
         Context appContext = context.getApplicationContext();
-        return AccessibilityMonitor.isAccessibilityServiceEnabled(appContext)
+        return AppSelectorStore.isAppEnabled(appContext)
+                && AccessibilityMonitor.isAccessibilityServiceEnabled(appContext)
                 && OverlayPermissionMonitor.canDrawOverlays(appContext)
                 && !AppSelectorStore.readSelectedPackages(appContext).isEmpty();
     }
 
     public static void syncService(Context context, String reason) {
         Context appContext = context.getApplicationContext();
+        boolean appEnabled = AppSelectorStore.isAppEnabled(appContext);
         boolean accessibilityEnabled = AccessibilityMonitor.isAccessibilityServiceEnabled(appContext);
         boolean overlayEnabled = OverlayPermissionMonitor.canDrawOverlays(appContext);
         int selectedCount = AppSelectorStore.readSelectedPackages(appContext).size();
         boolean activeFlag = AppSelectorStore.isOverlayActive(appContext);
         boolean serviceRunning = KeepAwakeServiceStatus.isRunning(appContext);
-        boolean shouldBeRunning = accessibilityEnabled && overlayEnabled && selectedCount > 0;
+        boolean shouldBeRunning = appEnabled && accessibilityEnabled && overlayEnabled && selectedCount > 0;
 
         DebugLog.i(appContext, "Sync keep-awake monitor: reason="
                 + reason
+                + ", appEnabled="
+                + appEnabled
                 + ", accessibility="
                 + accessibilityEnabled
                 + ", overlay="
@@ -66,13 +70,16 @@ public final class KeepAwakeServiceController {
 
     public static void refreshServiceState(Context context, String reason) {
         Context appContext = context.getApplicationContext();
+        boolean appEnabled = AppSelectorStore.isAppEnabled(appContext);
         boolean accessibilityEnabled = AccessibilityMonitor.isAccessibilityServiceEnabled(appContext);
         boolean overlayEnabled = OverlayPermissionMonitor.canDrawOverlays(appContext);
         int selectedCount = AppSelectorStore.readSelectedPackages(appContext).size();
-        boolean shouldBeRunning = accessibilityEnabled && overlayEnabled && selectedCount > 0;
+        boolean shouldBeRunning = appEnabled && accessibilityEnabled && overlayEnabled && selectedCount > 0;
 
         DebugLog.d(appContext, "Refresh keep-awake monitor: reason="
                 + reason
+                + ", appEnabled="
+                + appEnabled
                 + ", accessibility="
                 + accessibilityEnabled
                 + ", overlay="
@@ -91,6 +98,9 @@ public final class KeepAwakeServiceController {
 
     public static int getStatusLabelResId(Context context) {
         Context appContext = context.getApplicationContext();
+        if (!AppSelectorStore.isAppEnabled(appContext)) {
+            return R.string.monitor_status_disabled;
+        }
         if (!AccessibilityMonitor.isAccessibilityServiceEnabled(appContext)) {
             return R.string.monitor_status_accessibility_required;
         }
@@ -103,6 +113,13 @@ public final class KeepAwakeServiceController {
         return AppSelectorStore.isOverlayActive(appContext)
                 ? R.string.monitor_status_running
                 : R.string.monitor_status_starting;
+    }
+
+    public static void setAppEnabled(Context context, boolean enabled, String reason) {
+        Context appContext = context.getApplicationContext();
+        AppSelectorStore.setAppEnabled(appContext, enabled);
+        DebugLog.i(appContext, "Application enabled state changed: enabled=" + enabled + ", reason=" + reason);
+        syncService(appContext, reason);
     }
 
     private static void requestStart(Context context, String reason) {

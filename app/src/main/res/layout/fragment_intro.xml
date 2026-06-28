@@ -6,10 +6,10 @@
     android:orientation="vertical">
 
     <com.google.android.material.appbar.AppBarLayout
-        android:fitsSystemWindows="true"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@null">
+        android:background="@null"
+        android:fitsSystemWindows="true">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
@@ -42,6 +42,8 @@
                 style="@style/Widget.AlwaysOn.StatusCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:clickable="true"
+                android:focusable="true"
                 android:outlineAmbientShadowColor="?attr/colorPrimary"
                 android:outlineSpotShadowColor="?attr/colorPrimary"
                 app:cardBackgroundColor="?attr/colorPrimary"
@@ -68,7 +70,7 @@
                         android:layout_marginStart="24dp"
                         android:layout_toEndOf="@id/statusIcon"
                         android:fontFamily="sans-serif-medium"
-                        android:text="@string/intro_status_title"
+                        android:text="@string/software_status_title"
                         android:textAppearance="?attr/textAppearanceTitleMedium"
                         android:textColor="?attr/colorOnPrimary"
                         android:textSize="16sp" />
@@ -178,42 +180,7 @@
                         app:layout_constraintTop_toBottomOf="@id/overlayBody" />
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.AlwaysOn.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_normal">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="?dialogPreferredPadding">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/intro_action_title"
-                        android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/openAppsButton"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_normal"
-                        android:text="@string/intro_action_apps" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/openSettingsButton"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_small"
-                        android:text="@string/intro_action_settings" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
+
     </androidx.core.widget.NestedScrollView>
 </LinearLayout>

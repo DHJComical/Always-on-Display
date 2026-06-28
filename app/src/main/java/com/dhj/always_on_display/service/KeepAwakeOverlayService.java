@@ -218,6 +218,11 @@ public class KeepAwakeOverlayService extends Service {
             return;
         }
 
+        if (!AppSelectorStore.isAppEnabled(this)) {
+            DebugLog.i(this, "Skipping destroy restart scheduling because application is disabled by user");
+            return;
+        }
+
         if (!KeepAwakeServiceController.shouldServiceBeRunning(this)) {
             DebugLog.i(this, "Skipping destroy restart scheduling because monitor conditions are no longer satisfied");
             return;

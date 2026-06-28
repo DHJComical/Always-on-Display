@@ -9,6 +9,7 @@ import android.os.SystemClock;
 
 import androidx.annotation.NonNull;
 
+import com.dhj.always_on_display.data.AppSelectorStore;
 import com.dhj.always_on_display.logging.DebugLog;
 import com.dhj.always_on_display.system.BackgroundLaunchHelper;
 
@@ -23,6 +24,11 @@ public final class KeepAwakeRestartScheduler {
     }
 
     public static void scheduleRestart(@NonNull Context context, @NonNull String reason) {
+        if (!AppSelectorStore.isAppEnabled(context)) {
+            DebugLog.i(context, "Restart scheduling skipped because application is disabled by user: reason=" + reason);
+            return;
+        }
+
         AlarmManager alarmManager = context.getSystemService(AlarmManager.class);
         if (alarmManager == null) {
             DebugLog.w(context, "AlarmManager unavailable, cannot schedule restart: reason=" + reason);
