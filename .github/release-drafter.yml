@@ -1,7 +1,6 @@
 name-template: "AlwaysOnDisplay $RESOLVED_VERSION"
 tag-template: "$RESOLVED_VERSION"
 version-template: "$MAJOR.$MINOR.$PATCH"
-filter-by-commitish: true
 latest: true
 change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
 no-changes-template: "- No pull request changes"
